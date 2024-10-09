@@ -15,6 +15,7 @@ const accountSlice = createSlice({
     deposit(state, action) {
       // state.balance = state.balance + action.payload;
       state.balance += action.payload;
+      state.isLoading = false;
     },
 
     withdraw(state, action) {
@@ -36,17 +37,43 @@ const accountSlice = createSlice({
       },
     },
 
-    payLoan(state, action) {
+    payLoan(state) {
       state.balance -= state.loan;
       state.loan = 0;
       state.loanPurpose = "";
+    },
+
+    convertingCurrency(state) {
+      state.isLoading = true;
     },
   },
 });
 
 // console.log(accountSlice);
 
-export const { deposit, withdraw, requestLoan, payLoan } = accountSlice.actions;
+export const { withdraw, requestLoan, payLoan } = accountSlice.actions;
+
+// Here we did not create thunk in a RTK way rather we used our custom action creator function in order to create thunk in older way
+
+export function deposit(amount, currency) {
+  if (currency === "USD") return { type: "account/deposit", payload: amount };
+
+  return async function (dispatch, getState) {
+    dispatch({ type: "account/convertingCurrency" });
+    // API call
+
+    const res = await fetch(
+      `https://api.frankfurter.app/latest?amount=${amount}&from=${currency}&to=USD`
+    );
+
+    const data = await res.json();
+
+    // dispatch action
+
+    dispatch({ type: "account/deposit", payload: data.rates.USD });
+  };
+}
+
 export default accountSlice.reducer;
 
 // console.log(requestLoan(100, "car"));
